@@ -1,0 +1,212 @@
+import React, { Children, useEffect, useState } from "react";
+import { ethers } from "ethers";
+import { transactionABI, transactionAddress } from "../utils/constants";
+import Cookies from "js-cookie";
+
+export const TransactionContext = React.createContext();
+
+const getEthereumContract = () => {
+  const { ethereum } = window;
+
+  const provider = new ethers.providers.Web3Provider(ethereum);
+  const signer = provider.getSigner();
+  const transactionContract = new ethers.Contract(
+    transactionAddress,
+    transactionABI,
+    signer
+  );
+
+  console.log({
+    provider,
+    signer,
+    transactionContract,
+  });
+
+  return transactionContract;
+};
+
+export const TransactionsProvider = ({ children }) => {
+  const { ethereum } = window;
+  const [formData, setformData] = useState({ amount: "", message: "" });
+  const [currentAccount, setCurrentAccount] = useState();
+  const [isLoading, setIsLoading] = useState(false);
+  const [transactionCount, setTransactionCount] = useState(
+    localStorage.getItem("transactionCount")
+  );
+  const [transactions, setTransactions] = useState([]);
+  const [isConnectedWallet, setIsConnecting] = useState(false);
+  const handleChange = (e, name) => {
+    if (e.target.value <= 0) e.target.value = 0;
+    setformData((prvstate) => ({ ...prvstate, [name]: e.target.value }));
+  };
+
+  const handleReset = async () => {
+    try {
+      const contract = getEthereumContract();
+      const tx = await contract.resetTransactions();
+      console.log("Resetting transactions...");
+      await tx.wait();
+      console.log("Transactions reset!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Reset failed:", error);
+    }
+  };
+
+  const getAllTransactions = async () => {
+    try {
+      if (ethereum) {
+        const transactionsContract = getEthereumContract();
+
+        const availableTransactions =
+          await transactionsContract.getAllTransactions();
+
+        const structuredTransactions = availableTransactions.map(
+          (transaction) => ({
+            addressTo: transaction.receiver,
+            addressFrom: transaction.sender,
+            timestamp: new Date(
+              transaction.timestamp.toNumber() * 1000
+            ).toLocaleString(),
+            message: transaction.message,
+            keyword: transaction.keyword,
+            amount: parseInt(transaction.amount._hex) / 10 ** 18,
+          })
+        );
+
+        console.log(structuredTransactions);
+
+        setTransactions(structuredTransactions);
+      } else {
+        console.log("Ethereum is not present");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const connectWallet = async () => {
+    if (isConnectedWallet) return;
+    setIsConnecting(true);
+
+    if (!ethereum) {
+      alert("Please install MetaMask.");
+      setIsConnecting(false);
+      return;
+    }
+
+    try {
+      window.__CONNECTING_WALLET__ = true;
+
+      const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const account = accounts[0];
+      if (account) {
+        setCurrentAccount(account);
+
+        Cookies.set("connectedAccount", account, {
+          expires: 1,
+        });
+
+        console.log("Wallet connected:", account);
+      }
+      window.location.reload();
+    } catch (error) {
+      console.error("Connect Wallet Error:", error.message);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const sendTransaction = async () => {
+    const { ethereum } = window;
+    try {
+      if (!ethereum) return console.log("No ethereum object");
+
+      const { amount, message } = formData;
+      const transactionsContract = getEthereumContract();
+      const parsedAmount = ethers.utils.parseEther(amount);
+
+      const transaction = await transactionsContract.addToBlockchain(
+        parsedAmount.toString(),
+        message,
+        {
+          value: parsedAmount,
+        }
+      );
+
+      setIsLoading(true);
+      console.log(`Loading - ${transaction.hash}`);
+      await transaction.wait();
+      console.log(`Success - ${transaction.hash}`);
+      setIsLoading(false);
+
+      const transactionsCount =
+        await transactionsContract.getTransactionCount();
+      setTransactionCount(transactionsCount.toNumber());
+      window.location.reload();
+    } catch (error) {
+      console.error("sendTransaction error:", error);
+    }
+  };
+
+  const checkIfWalletIsConnect = async () => {
+    try {
+      if (!ethereum) return alert("Please install MetaMask.");
+
+      const accounts = await ethereum.request({ method: "eth_accounts" });
+
+      if (accounts.length) {
+        setCurrentAccount(accounts[0]);
+
+        getAllTransactions();
+      } else {
+        console.log("No accounts found");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const checkTransactions = async () => {
+    try {
+      if (ethereum) {
+        const transactionsContract = getEthereumContract();
+        const currentTransactionCount =
+          await transactionsContract.getTransactionCount();
+
+        window.localStorage.setItem(
+          "transactionCount",
+          currentTransactionCount
+        );
+      }
+    } catch (error) {
+      console.log(error);
+
+      throw new Error("No ethereum object");
+    }
+  };
+
+  useEffect(() => {
+    checkIfWalletIsConnect();
+    checkTransactions();
+  }, [transactionCount]);
+  return (
+    <TransactionContext.Provider
+      value={{
+        transactionCount,
+        handleReset,
+        currentAccount,
+        handleChange,
+        formData,
+        isLoading,
+        sendTransaction,
+        connectWallet,
+        transactions,
+      }}
+    >
+      {children}
+    </TransactionContext.Provider>
+  );
+};
