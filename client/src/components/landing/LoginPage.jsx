@@ -1,20 +1,30 @@
+import React, { useEffect, useState } from "react";
 import { MdAlternateEmail } from "react-icons/md";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import { IoKeyOutline } from "react-icons/io5";
 import { GrGoogle } from "react-icons/gr";
 import { CgProfile } from "react-icons/cg";
-import { useState } from "react";
 import { BsApple } from "react-icons/bs";
 import { FaXTwitter } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import AuthRequest from "../../Request/AuthRequest";
 import Cookies from "js-cookie";
+import { useWallet } from "../../context/ConnectWalletContext";
 
 const LoginPage = () => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [currentAccount, setCurrentAccount] = useState();
+  const [walletConnecting, setConnecting] = useState(false);
+  const { connect, address } = useWallet();
   const togglePasswordView = () => setShowPassword(!showPassword);
+
+  useEffect(() => {
+    if (walletConnecting && address) {
+      SubmitProcess();
+    }
+  }, [walletConnecting, address]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -23,27 +33,30 @@ const LoginPage = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const SubmitProcess = async () => {
     try {
-      const response = await AuthRequest.loginUser(formData);
-      console.log("Login success:", response.data);
-      const { user } = response.data;
-
+      const resp = await AuthRequest.loginUser(formData);
+      const { user } = resp.data;
       Cookies.set("userEmail", user.email, { expires: 7 });
       Cookies.set("userName", user.name, { expires: 7 });
-
-      navigate("/");
-      // Bạn có thể lưu token / chuyển hướng sau khi login thành công
-      // localStorage.setItem("token", response.data.token);
-    } catch (error) {
-      console.error("Login failed:", error);
-    } finally {
+      navigate("/campaigns");
+    } catch (err) {
+      console.error("Login Failed:", err);
+      setWaiting(false);
     }
   };
 
-  const navigate = useNavigate();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!address) {
+      setConnecting(true);
+      connect();
+      return;
+    }
+    SubmitProcess();
+  };
+
   return (
     <div className="w-full h-screen flex items-center justify-center">
       <div className="w-[90%] max-w-sm md:max-w-md lg:max-w-md p-5 bg-gray-900 flex-col flex items-center gap-3 rounded-xl shadow-slate-500 shadow-lg">

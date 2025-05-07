@@ -21,7 +21,7 @@ const NavBarItem = ({ title, classProps, path }) => {
 };
 
 export const NAV_LINKS = [
-  { title: "Wallet", path: "/" },
+  { title: "About", path: "/" },
   { title: "Explorer", path: "/campaigns" },
 ];
 

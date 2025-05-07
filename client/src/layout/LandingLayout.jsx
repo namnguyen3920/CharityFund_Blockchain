@@ -1,5 +1,11 @@
 import { Outlet } from "react-router-dom";
-import { Transactions, Footer, NavBar, Welcome } from "../components/landing";
+import {
+  LatestTransactions,
+  Footer,
+  NavBar,
+  Welcome,
+  RunningCampaigns,
+} from "../components/landing";
 
 const LandingLayout = () => (
   <div className="min-h-screen xflex flex-col">
@@ -10,7 +16,8 @@ const LandingLayout = () => (
         <Welcome />
       </main>
     </div>
-    <Transactions />
+    <LatestTransactions />
+    <RunningCampaigns />
     <Footer />
   </div>
 );

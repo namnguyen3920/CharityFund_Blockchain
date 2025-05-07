@@ -29,7 +29,9 @@ const CampaignDashboard = ({ title, isLoading, campaigns }) => {
         {!isLoading ||
           (campaigns.length === 0 && (
             <p className="font-bold text-[14px] leading-[30px] text-white">
-              You have not created any campigns yet
+              There are no campaigns created yet. <br /> Be the first to create
+              a campaign.
+              <br /> Click on the "Create Campaign" button to get started.
             </p>
           ))}
 

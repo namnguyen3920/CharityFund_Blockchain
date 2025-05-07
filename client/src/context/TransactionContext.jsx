@@ -28,7 +28,7 @@ const getEthereumContract = () => {
 export const TransactionsProvider = ({ children }) => {
   const { ethereum } = window;
   const [formData, setformData] = useState({ amount: "", message: "" });
-  const [currentAccount, setCurrentAccount] = useState();
+  const [currentAddress, setcurrentAddress] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [transactionCount, setTransactionCount] = useState(
     localStorage.getItem("transactionCount")
@@ -103,9 +103,9 @@ export const TransactionsProvider = ({ children }) => {
       });
       const account = accounts[0];
       if (account) {
-        setCurrentAccount(account);
+        setcurrentAddress(account);
 
-        Cookies.set("connectedAccount", account, {
+        Cookies.set("connectedAddress", account, {
           expires: 1,
         });
 
@@ -158,7 +158,7 @@ export const TransactionsProvider = ({ children }) => {
       const accounts = await ethereum.request({ method: "eth_accounts" });
 
       if (accounts.length) {
-        setCurrentAccount(accounts[0]);
+        setcurrentAddress(accounts[0]);
 
         getAllTransactions();
       } else {
@@ -197,7 +197,7 @@ export const TransactionsProvider = ({ children }) => {
       value={{
         transactionCount,
         handleReset,
-        currentAccount,
+        currentAddress,
         handleChange,
         formData,
         isLoading,

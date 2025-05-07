@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import Cookies from "js-cookie";
 import { useCampaignFactory } from "../../context/CampaignFactoryContext";
 import { useWallet } from "../../context/ConnectWalletContext";
 import CustomButton from "./custom/CustomButton";
@@ -12,7 +12,7 @@ const CampaignNavbar = () => {
   const [isActive, setIsActive] = useState("dashboard");
   const [toggleDrawer, setToggleDrawer] = useState(false);
   const { connect, disconnect, address } = useWallet();
-
+  const isLogedIn = Cookies.get("userEmail");
   return (
     <div className="flex md:flex-row flex-col-reverse justify-between mb-[35px] gap-6">
       <div className="lg:flex-1 flex flex-row max-w-[458px] py-2 pl-4 pr-2 h-[52px] bg-[#1c1c24] rounded-[100px]">
@@ -34,11 +34,11 @@ const CampaignNavbar = () => {
       <div className="sm:flex hidden flex-row justify-end gap-4">
         <CustomButton
           btnType="button"
-          title={address ? "Create a campaign" : "Login"}
-          styles={address ? "bg-[#1dc071]" : "bg-[#8c6dfd]"}
+          title={isLogedIn ? "Create a campaign" : "Login"}
+          styles={isLogedIn ? "bg-[#1dc071]" : "bg-[#8c6dfd]"}
           handleClick={() => {
-            if (address) navigate("/campaigns/create-campaign");
-            else connect();
+            if (isLogedIn) navigate("/campaigns/create-campaign");
+            else navigate("/login");
           }}
         />
 
