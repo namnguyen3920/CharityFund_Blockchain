@@ -19,11 +19,27 @@ const RunningCampaign = () => {
     navigate(`/campaign-details/${campaign.pId}`, { state: campaign });
   };
   const { address, contract, getAllCampaigns } = useCampaignFactory();
+
   const fetchCampaigns = async () => {
     setIsLoading(true);
-    const data = await getAllCampaigns();
-    setCampaigns(data);
-    setIsLoading(false);
+    try {
+      const data = await getAllCampaigns();
+      console.log("Campaigns:", data);
+      if (Array.isArray(data) && data.length > 0) {
+        data.sort(
+          (firstCampaign, secondCampaign) =>
+            firstCampaign.deadline - secondCampaign.deadline
+        );
+        setCampaigns(data);
+      } else {
+        setCampaigns([]);
+      }
+    } catch (err) {
+      console.warn("Get campaigns failed:", err);
+      setCampaigns([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -32,7 +48,7 @@ const RunningCampaign = () => {
 
   return (
     <div className="flex w-full justify-center items-center px-4 2xl:px-20 gradient-bg-transactions">
-      <div className="flex flex-col w-full max-w-screen-xl md:p-12 py-12 px-4">
+      <div className="flex flex-col w-full justify-center items-center max-w-screen-xl md:p-12 py-12 px-4">
         <h3 className="text-white text-3xl text-center my-8">
           Running Campaigns
         </h3>
@@ -44,7 +60,9 @@ const RunningCampaign = () => {
             className="w-[100px] h-[100px] object-contain"
           />
         ) : campaigns.length === 0 ? (
-          <p className="text-gray-400 mt-10">No campaigns</p>
+          <p className="text-gray-400 mt-10">
+            There are no campaigns running at the moment.
+          </p>
         ) : (
           <Swiper
             className="w-full"

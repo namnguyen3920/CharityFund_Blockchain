@@ -5,7 +5,7 @@ import { useState } from "react";
 import Cookies from "js-cookie";
 import { TransactionContext } from "../../context/TransactionContext";
 import { shortenAddress } from "../../utils/shortenAddress";
-import { useWallet } from "../../context/ConnectWalletContext";
+import { useFunds } from "../../hooks/useFunds";
 
 const companyCommonStyles =
   "min-h-[70px] sm:px-0 px-2 sm:min-w-[120px] flex justify-center items-center border-[0.5px] border-gray-400 text-sm font-light text-white";
@@ -13,11 +13,12 @@ const companyCommonStyles =
 const Input = ({ placeholder, name, type, value, handleChange, isLoading }) => (
   <input
     placeholder={placeholder}
+    name={name}
     type={type}
     step="0.0001"
     value={value}
     onChange={(e) => handleChange(e, name)}
-    className="my-2 w-full rounded-sm p-2 outline-none bg-transparent text-white border-none text-sm white-glassmorphism"
+    className="my-2 w-full rounded-sm p-2 outline-none bg-transparent text-white border-none text-sm"
   />
 );
 
@@ -30,10 +31,15 @@ const Welcome = () => {
     isLoading,
     sendTransaction,
   } = useContext(TransactionContext);
-  const [walletStatus, setWalletStatus] = useState(null);
-  const handleSubmit = (e) => {
-    const { amount, message } = formData;
 
+  const [walletStatus, setWalletStatus] = useState(null);
+  const { funds, loading, error } = useFunds();
+
+  const handleSubmit = (e) => {
+    const { amount, message, fundAddress } = formData;
+
+    console.log("formData", formData);
+    console.log("fundAddress", fundAddress);
     e.preventDefault();
 
     if (!amount) return;
@@ -114,7 +120,7 @@ const Welcome = () => {
               </div>
             </div>
           </div>
-          <div className="p-5 sm:w-96 w-full flex flex-col justify-start items-center blue-glassmorphism">
+          <div className="p-5 sm:w-96 w-full flex flex-col justify-start items-center blue-glassmorphism overflow-visible">
             <Input
               placeholder="Amount (ETH)"
               name="amount"
@@ -128,16 +134,25 @@ const Welcome = () => {
               type="text"
               handleChange={handleChange}
             />
-            <select
-              name="purpose"
-              onChange={handleChange}
-              className="bg-[#1f2937] text-white rounded px-3 py-2 w-full mt-2"
-            >
-              <option value="">-- Select Fund --</option>
-              <option value="education">Education</option>
-              <option value="health">Health</option>
-              <option value="environment">Environment</option>
-            </select>
+            {loading ? (
+              <p className="text-gray-400">Loading funds…</p>
+            ) : error ? (
+              <p className="text-red-500">Failed to load funds</p>
+            ) : (
+              <select
+                name="fundAddress"
+                value={formData.fundAddress}
+                onChange={handleChange}
+                className="bg-[#1f2937] text-white px-3 py-2 w-full mt-2"
+              >
+                <option value="">Select Fund</option>
+                {funds.map((fund) => (
+                  <option key={fund._id} value={fund.address}>
+                    {fund.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <div className="h-[1px] w-full bg-gray-400 my-2" />
 

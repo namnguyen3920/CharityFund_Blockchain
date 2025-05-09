@@ -67,6 +67,15 @@ body {
     hsla(253,16%,7%,1) 100%
   );
 }
+.blue-glassmorphism select {
+  background-color: transparent !important;
+  color: white;
+}
+
+.blue-glassmorphism select option {
+  background-color: #1f2937 !important;
+  color: white !important;
+}
 
 .blue-glassmorphism {
   background: rgb(39, 51, 89, 0.4);

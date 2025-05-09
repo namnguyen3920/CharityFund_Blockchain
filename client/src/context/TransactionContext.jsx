@@ -27,7 +27,12 @@ const getEthereumContract = () => {
 
 export const TransactionsProvider = ({ children }) => {
   const { ethereum } = window;
-  const [formData, setformData] = useState({ amount: "", message: "" });
+  const [formData, setformData] = useState({
+    amount: "",
+    message: "",
+    fundAddress: "",
+  });
+
   const [currentAddress, setcurrentAddress] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [transactionCount, setTransactionCount] = useState(
@@ -35,9 +40,12 @@ export const TransactionsProvider = ({ children }) => {
   );
   const [transactions, setTransactions] = useState([]);
   const [isConnectedWallet, setIsConnecting] = useState(false);
-  const handleChange = (e, name) => {
-    if (e.target.value <= 0) e.target.value = 0;
-    setformData((prvstate) => ({ ...prvstate, [name]: e.target.value }));
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const newValue = name === "amount" && +value <= 0 ? "0" : value;
+    console.log("changed", name, newValue);
+    setformData((prvstate) => ({ ...prvstate, [name]: value }));
   };
 
   const handleReset = async () => {
@@ -63,8 +71,8 @@ export const TransactionsProvider = ({ children }) => {
 
         const structuredTransactions = availableTransactions.map(
           (transaction) => ({
-            addressTo: transaction.receiver,
-            addressFrom: transaction.sender,
+            receiver: transaction.receiver,
+            sender: transaction.sender,
             timestamp: new Date(
               transaction.timestamp.toNumber() * 1000
             ).toLocaleString(),
@@ -119,35 +127,67 @@ export const TransactionsProvider = ({ children }) => {
     }
   };
 
+  // const sendTransaction = async () => {
+  //   const { ethereum } = window;
+  //   try {
+  //     if (!ethereum) return console.log("No ethereum object");
+
+  //     const { amount, message } = formData;
+  //     const transactionsContract = getEthereumContract();
+  //     const parsedAmount = ethers.utils.parseEther(amount);
+
+  //     const transaction = await transactionsContract.donateToFund(
+  //       parsedAmount.toString(),
+  //       message,
+  //       {
+  //         value: parsedAmount,
+  //       }
+  //     );
+
+  //     setIsLoading(true);
+  //     console.log(`Loading - ${transaction.hash}`);
+  //     await transaction.wait();
+  //     console.log(`Success - ${transaction.hash}`);
+  //     setIsLoading(false);
+
+  //     const transactionsCount =
+  //       await transactionsContract.getTransactionCount();
+  //     setTransactionCount(transactionsCount.toNumber());
+  //     window.location.reload();
+  //   } catch (error) {
+  //     console.error("sendTransaction error:", error);
+  //   }
+  // };
+
   const sendTransaction = async () => {
     const { ethereum } = window;
-    try {
-      if (!ethereum) return console.log("No ethereum object");
+    if (!ethereum) {
+      console.log("No ethereum object");
+      return;
+    }
 
-      const { amount, message } = formData;
+    try {
+      const { amount, message, fundAddress } = formData;
       const transactionsContract = getEthereumContract();
       const parsedAmount = ethers.utils.parseEther(amount);
 
-      const transaction = await transactionsContract.addToBlockchain(
-        parsedAmount.toString(),
-        message,
-        {
-          value: parsedAmount,
-        }
-      );
+      const tx = await transactionsContract.donateToFund(fundAddress, message, {
+        value: parsedAmount,
+      });
 
       setIsLoading(true);
-      console.log(`Loading - ${transaction.hash}`);
-      await transaction.wait();
-      console.log(`Success - ${transaction.hash}`);
+      console.log(`Loading - ${tx.hash}`);
+      await tx.wait();
+      console.log(`Success - ${tx.hash}`);
       setIsLoading(false);
 
-      const transactionsCount =
-        await transactionsContract.getTransactionCount();
-      setTransactionCount(transactionsCount.toNumber());
+      const count = await transactionsContract.getTransactionCount();
+      setTransactionCount(count.toNumber());
+
       window.location.reload();
     } catch (error) {
       console.error("sendTransaction error:", error);
+      setIsLoading(false);
     }
   };
 
