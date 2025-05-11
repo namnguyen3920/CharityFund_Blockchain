@@ -5,7 +5,7 @@ import Cookies from "js-cookie";
 
 export const TransactionContext = React.createContext();
 
-const getEthereumContract = () => {
+const getTransactionContract = () => {
   const { ethereum } = window;
 
   const provider = new ethers.providers.Web3Provider(ethereum);
@@ -49,22 +49,18 @@ export const TransactionsProvider = ({ children }) => {
   };
 
   const handleReset = async () => {
-    try {
-      const contract = getEthereumContract();
-      const tx = await contract.resetTransactions();
-      console.log("Resetting transactions...");
-      await tx.wait();
-      console.log("Transactions reset!");
-      window.location.reload();
-    } catch (error) {
-      console.error("Reset failed:", error);
-    }
+    const contract = getTransactionContract();
+    const tx = await contract.resetTransactions();
+    console.log("Resetting transactions...");
+    await tx.wait();
+    console.log("Transactions reset!");
+    window.location.reload();
   };
 
   const getAllTransactions = async () => {
     try {
       if (ethereum) {
-        const transactionsContract = getEthereumContract();
+        const transactionsContract = getTransactionContract();
 
         const availableTransactions =
           await transactionsContract.getAllTransactions();
@@ -127,38 +123,6 @@ export const TransactionsProvider = ({ children }) => {
     }
   };
 
-  // const sendTransaction = async () => {
-  //   const { ethereum } = window;
-  //   try {
-  //     if (!ethereum) return console.log("No ethereum object");
-
-  //     const { amount, message } = formData;
-  //     const transactionsContract = getEthereumContract();
-  //     const parsedAmount = ethers.utils.parseEther(amount);
-
-  //     const transaction = await transactionsContract.donateToFund(
-  //       parsedAmount.toString(),
-  //       message,
-  //       {
-  //         value: parsedAmount,
-  //       }
-  //     );
-
-  //     setIsLoading(true);
-  //     console.log(`Loading - ${transaction.hash}`);
-  //     await transaction.wait();
-  //     console.log(`Success - ${transaction.hash}`);
-  //     setIsLoading(false);
-
-  //     const transactionsCount =
-  //       await transactionsContract.getTransactionCount();
-  //     setTransactionCount(transactionsCount.toNumber());
-  //     window.location.reload();
-  //   } catch (error) {
-  //     console.error("sendTransaction error:", error);
-  //   }
-  // };
-
   const sendTransaction = async () => {
     const { ethereum } = window;
     if (!ethereum) {
@@ -168,7 +132,7 @@ export const TransactionsProvider = ({ children }) => {
 
     try {
       const { amount, message, fundAddress } = formData;
-      const transactionsContract = getEthereumContract();
+      const transactionsContract = getTransactionContract();
       const parsedAmount = ethers.utils.parseEther(amount);
 
       const tx = await transactionsContract.donateToFund(fundAddress, message, {
@@ -212,7 +176,7 @@ export const TransactionsProvider = ({ children }) => {
   const checkTransactions = async () => {
     try {
       if (ethereum) {
-        const transactionsContract = getEthereumContract();
+        const transactionsContract = getTransactionContract();
         const currentTransactionCount =
           await transactionsContract.getTransactionCount();
 

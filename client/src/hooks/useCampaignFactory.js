@@ -1,4 +1,4 @@
-// src/hooks/useFactory.js
+
 import { useContract, useContractWrite } from "@thirdweb-dev/react";
 import { ethers } from "ethers";
 import {
