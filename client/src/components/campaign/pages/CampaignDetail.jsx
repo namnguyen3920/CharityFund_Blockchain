@@ -1,182 +1,275 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ethers } from "ethers";
 
-import { useCampaignFactory } from "../../../context/CampaignFactoryContext";
+import DonationField from "../DonationField";
+import CampaignSlugRequest from "../../../Request/CampaignSlugRequest";
+import { useCampaignDetails } from "../../../hooks/useCampaignDetails";
+import { useWallet } from "../../../hooks/useWallet";
 import { CountBox, CustomButton } from "../custom";
 import { Loader } from "../../Loader";
 import { calculateBarPercentage, daysLeft } from "../../../utils/campaignUtils";
 import { small_logo } from "../../../assets";
 
 const CampaignDetail = () => {
-  const { state } = useLocation();
-  console.log("State:", state);
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const { donate, getDonations, contract, address } = useCampaignFactory();
+  const connectedAddress = useWallet();
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [amount, setAmount] = useState("");
+  const [campaignAddress, setCampaignAddress] = useState(null);
+  const [campaignData, setCampaignData] = useState(null);
   const [donators, setDonators] = useState([]);
-
-  const remainingDays = daysLeft(state.deadline);
-
-  const fetchDonators = async () => {
-    const data = await getDonations(state.pId);
-
-    setDonators(data);
-  };
+  const [donationForm, setDonationForm] = useState({ amount: "", message: "" });
+  const [isLoading, setIsLoading] = useState(false);
+  const [validOwner, setValidOwner] = useState(false);
+  const [isClaimed, setIsClaimed] = useState(false);
 
   useEffect(() => {
-    if (contract) fetchDonators();
-  }, [contract, address]);
+    const getCampaignAddress = async () => {
+      try {
+        const res = await CampaignSlugRequest.getCampaignAddress(slug);
+        setCampaignAddress(res.data.address);
+      } catch (err) {
+        console.error("Failed to fetch campaign address:", err);
+      }
+    };
+    getCampaignAddress();
+  }, [slug]);
+
+  const { donate, getDetails, getBlocks, withdraw } =
+    useCampaignDetails(campaignAddress);
+
+  useEffect(() => {
+    if (!campaignAddress) return;
+
+    const updateCampaignData = async () => {
+      try {
+        setIsLoading(true);
+        const [details, donors] = await Promise.all([
+          getDetails(),
+          getBlocks(),
+        ]);
+        const remainingDays = daysLeft(details.deadline);
+        console.log("Donors: ", donors);
+        setCampaignData({
+          ...details,
+          deadline: details.deadline,
+          remainingDays,
+          campaignAddress,
+        });
+        setDonators(donors);
+        setIsClaimed(details.claimed);
+      } catch (error) {
+        console.error("Error loading campaign data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    updateCampaignData();
+  }, [campaignAddress]);
+
+  useEffect(() => {
+    if (campaignData && connectedAddress) {
+      setValidOwner(
+        campaignData?.owner?.toLowerCase() === connectedAddress.toLowerCase()
+      );
+    }
+  }, [campaignData, connectedAddress]);
 
   const handleDonate = async () => {
     setIsLoading(true);
-
-    await donate(state.pId, amount);
-
-    navigate("/campaigns");
-    setIsLoading(false);
+    try {
+      await donate(donationForm.amount, donationForm.message);
+      setDonationForm({ amount: "", message: "" });
+      const [data, donors] = await Promise.all([getDetails(), getBlocks()]);
+      setCampaignData({
+        ...data,
+        remainingDays: daysLeft(data.deadline),
+        campaignAddress,
+      });
+      setDonators(donors);
+    } catch (error) {
+      console.error("Donation failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleWithdraw = async () => {
+    setIsLoading(true);
+    try {
+      await withdraw();
+      setIsClaimed(true);
+      const [data, donors] = await Promise.all([getDetails(), getBlocks()]);
+      setCampaignData({
+        ...data,
+        remainingDays: daysLeft(data.deadline),
+        campaignAddress,
+      });
+      setDonators(donors);
+    } catch (error) {
+      console.error("Withdraw failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isTargetReached =
+    campaignData?.claimed === true ||
+    parseFloat(campaignData?.amountCollected) >=
+      parseFloat(campaignData?.target);
+
+  console.log("isTargetReached: ", isTargetReached);
+  if (!campaignData) return <Loader />;
+  console.log("Campaign Data: ", campaignData);
+
+  console.log("Donators:", donators);
   return (
-    <div>
+    <div className="w-full px-4 ">
       {isLoading && <Loader />}
 
-      <div className="w-full flex md:flex-row flex-col mt-10 gap-[30px]">
-        <div className="flex-1 flex-col">
-          <img
-            src={state.image}
-            alt="campaign"
-            className="w-full h-[410px] object-cover rounded-xl"
-          />
-          <div className="relative w-full h-[5px] bg-[#3a3a43] mt-2">
-            <div
-              className="absolute h-full bg-[#4acd8d]"
-              style={{
-                width: `${calculateBarPercentage(
-                  state.target,
-                  state.amountCollected
-                )}%`,
-                maxWidth: "100%",
-              }}
-            ></div>
+      <div className="w-full max-w-[1280px] mx-auto">
+        <h2 className="text-white text-[24px] font-bold">Campaign Details</h2>
+        <div className="w-full flex md:flex-row flex-col mt-10 gap-[30px]">
+          <div className="flex-1 flex-col">
+            <img
+              src={campaignData.image}
+              alt="campaign"
+              className="w-full h-[410px] object-cover rounded-xl"
+            />
+            <div className="relative w-full h-[5px] bg-[#3a3a43] mt-2">
+              <div
+                className="absolute h-full bg-[#4acd8d]"
+                style={{
+                  width: `${calculateBarPercentage(
+                    campaignData.target,
+                    campaignData.collected
+                  )}%`,
+                  maxWidth: "100%",
+                }}
+              ></div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex md:w-[150px] w-full flex-wrap justify-between gap-[30px]">
-          <CountBox title="Days Left" value={remainingDays} />
-          <CountBox
-            title={`Raised of ${state.target}`}
-            value={state.amountCollected}
-          />
-          <CountBox title="Total Backers" value={donators.length} />
+          <div className="flex md:w-[150px] w-full flex-wrap justify-between gap-[30px]">
+            <CountBox title="Days Left" value={campaignData.remainingDays} />
+            <CountBox
+              title={`Raised of ${campaignData.target}`}
+              value={
+                parseFloat(campaignData.amountCollected) !== 0
+                  ? campaignData.amountCollected
+                  : campaignData.totalCollected
+              }
+            />
+            <CountBox title="Donation" value={donators.length} />
+          </div>
         </div>
       </div>
 
-      <div className="mt-[60px] flex lg:flex-row flex-col gap-5">
-        <div className="flex-[2] flex flex-col gap-[40px]">
-          <div>
-            <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
-              Creator
-            </h4>
-
-            <div className="mt-[20px] flex flex-row items-center flex-wrap gap-[14px]">
-              <div className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-[#2c2f32] cursor-pointer">
-                <img
-                  src={small_logo}
-                  alt="user"
-                  className="w-[60%] h-[60%] object-contain"
-                />
-              </div>
+      <div className="mt-[60px] w-full">
+        <div className="flex lg:flex-row flex-col gap-5">
+          <div className="flex-[8]">
+            <div className="bg-[#1c1c24] rounded-[10px] p-6 flex flex-col gap-[30px]">
               <div>
-                <h4 className="font-epilogue font-semibold text-[14px] text-white break-all">
-                  {state.owner}
-                </h4>
-                <p className="mt-[4px] font-epilogue font-normal text-[12px] text-[#808191]">
-                  10 Campaigns
-                </p>
-              </div>
-            </div>
-          </div>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
+                    CREATOR
+                  </h4>
+                  <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
+                    CAMPAIGN ADDRESS
+                  </h4>
+                </div>
 
-          <div>
-            <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
-              Story
-            </h4>
-
-            <div className="mt-[20px]">
-              <p className="font-epilogue font-normal text-[16px] text-[#808191] leading-[26px] text-justify">
-                {state.description}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
-              Donators
-            </h4>
-
-            <div className="mt-[20px] flex flex-col gap-4">
-              {donators.length > 0 ? (
-                donators.map((item, index) => (
-                  <div
-                    key={`${item.donator}-${index}`}
-                    className="flex justify-between items-center gap-4"
-                  >
-                    <p className="font-epilogue font-normal text-[16px] text-[#b2b3bd] leading-[26px] break-ll">
-                      {index + 1}. {item.donator}
-                    </p>
-                    <p className="font-epilogue font-normal text-[16px] text-[#808191] leading-[26px] break-ll">
-                      {item.donation}
-                    </p>
+                <div className="mt-[20px] flex justify-between items-start gap-4 flex-wrap">
+                  <div className="flex items-center gap-[14px]">
+                    <div className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-[#2c2f32] cursor-pointer">
+                      <img
+                        src={small_logo}
+                        alt="user"
+                        className="w-[60%] h-[60%] object-contain"
+                      />
+                    </div>
+                    <div>
+                      <h4 className="font-epilogue font-semibold text-[14px] text-white break-all">
+                        {campaignData.owner}
+                      </h4>
+                      <p className="mt-[4px] font-epilogue font-normal text-[12px] text-gray-400">
+                        10 Campaigns
+                      </p>
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p className="font-epilogue font-normal text-[16px] text-[#808191] leading-[26px] text-justify">
-                  No donators yet. Be the first one!
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+                  <div className="max-w-[50%]">
+                    <h4 className="font-epilogue font-semibold text-[14px] text-white break-all text-right">
+                      {campaignData.campaignAddress}
+                    </h4>
+                  </div>
+                </div>
+              </div>
 
-        <div className="flex-1">
-          <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
-            Fund
-          </h4>
-
-          <div className="mt-[20px] flex flex-col p-4 bg-[#1c1c24] rounded-[10px]">
-            <p className="font-epilogue fount-medium text-[20px] leading-[30px] text-center text-[#808191]">
-              Fund the campaign
-            </p>
-            <div className="mt-[30px]">
-              <input
-                type="number"
-                placeholder="ETH 0.1"
-                step="0.01"
-                className="w-full py-[10px] sm:px-[20px] px-[15px] outline-none border-[1px] border-[#3a3a43] bg-transparent font-epilogue text-white text-[18px] leading-[30px] placeholder:text-[#4b5264] rounded-[10px]"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-
-              <div className="my-[20px] p-4 bg-[#13131a] rounded-[10px]">
-                <h4 className="font-epilogue font-semibold text-[14px] leading-[22px] text-white">
-                  Back it because you believe in it.
+              <div>
+                <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
+                  Story
                 </h4>
-                <p className="mt-[20px] font-epilogue font-normal leading-[22px] text-[#808191]">
-                  Support the project for no reward, just because it speaks to
-                  you.
+                <p className="mt-[20px] font-epilogue font-medium text-[16px] text-[#cbd5e1] leading-[28px] text-justify">
+                  {campaignData.description}
                 </p>
               </div>
 
-              <CustomButton
-                btnType="button"
-                title="Fund Campaign"
-                styles="w-full bg-[#8c6dfd]"
-                handleClick={handleDonate}
-              />
+              <div className="mt-[20px]">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-epilogue font-semibold text-[18px] text-white uppercase">
+                    Donators
+                  </h4>
+                  <button
+                    onClick={() =>
+                      navigate(`/campaigns/campaign-details/${slug}/donations`)
+                    }
+                    className="text-sm text-[#14ec99] hover:underline cursor-pointer"
+                  >
+                    View Donations &gt;
+                  </button>
+                </div>
+
+                <div className="mt-[20px] flex flex-col gap-4">
+                  {donators.length <= 1 ? (
+                    <p className="font-epilogue font-normal text-[16px] text-[#cbd5e1] leading-[26px] text-justify">
+                      No donators yet. Be the first one!
+                    </p>
+                  ) : (
+                    (isClaimed ? donators.slice(1, -1) : donators.slice(1)).map(
+                      (d, index) => (
+                        <div
+                          key={`${d.donor}-${index}`}
+                          className="flex justify-between items-center gap-4"
+                        >
+                          <p className="font-epilogue font-normal text-[16px] text-[#f1f5f9] leading-[26px] break-all">
+                            {index + 1}. {d.donor}
+                          </p>
+                          <p className="font-epilogue font-normal text-[16px] text-[#cbd5e1] leading-[26px] break-all">
+                            {d.amount}
+                          </p>
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+              </div>
             </div>
+          </div>
+
+          <div className="flex-[2]">
+            <DonationField
+              donationForm={donationForm}
+              setDonationForm={setDonationForm}
+              isTargetReached={isTargetReached}
+              isLoading={isLoading}
+              handleDonate={handleDonate}
+              handleWithdraw={handleWithdraw}
+              connectedAddress={connectedAddress}
+              campaignData={campaignData}
+              slug={slug}
+            />
           </div>
         </div>
       </div>

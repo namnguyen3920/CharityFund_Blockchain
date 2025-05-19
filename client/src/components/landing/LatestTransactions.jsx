@@ -46,7 +46,9 @@ const LatestTransactions = () => {
     }
     return m;
   }, [funds]);
+  const filteredTxs = transactions.filter((tx) => parseFloat(tx.amount) >= 0.5);
 
+  console.log("Transaction: ", transactions);
   return (
     <div className="flex w-full justify-center items-center 2xl:px-20 gradient-bg-transactions">
       <div className="w-full max-w-screen-xl flex flex-col md:p-12 py-12 px-4">
@@ -54,26 +56,23 @@ const LatestTransactions = () => {
           Latest Transactions
         </h3>
 
-        {transactions.length > 0 ? (
+        {filteredTxs.length > 0 ? (
           <div className="flex flex-wrap justify-center items-center mt-10">
-            {[...transactions]
-              .filter((tx) => parseFloat(tx.amount) >= 0.5)
-              .reverse()
-              .map((transaction, i) => {
-                const fund = fundByAddress[transaction.receiver.toLowerCase()];
-                const fundName = fund ? fund.name : "Unknown Fund";
-                return (
-                  <TransactionsCard
-                    key={i}
-                    sender={transaction.sender}
-                    receiver={transaction.receiver}
-                    amount={transaction.amount}
-                    message={transaction.message}
-                    timestamp={transaction.timestamp}
-                    fundName={fundName}
-                  />
-                );
-              })}
+            {[...transactions].reverse().map((transaction, i) => {
+              const fund = fundByAddress[transaction.receiver.toLowerCase()];
+              const fundName = fund ? fund.name : "Unknown Fund";
+              return (
+                <TransactionsCard
+                  key={i}
+                  sender={transaction.sender}
+                  receiver={transaction.receiver}
+                  amount={transaction.amount}
+                  message={transaction.message}
+                  timestamp={transaction.timestamp}
+                  fundName={fundName}
+                />
+              );
+            })}
           </div>
         ) : (
           <p className="text-gray-400 mt-10 text-center">

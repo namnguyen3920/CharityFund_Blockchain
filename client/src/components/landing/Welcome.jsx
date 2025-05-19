@@ -35,11 +35,8 @@ const Welcome = () => {
   const [walletStatus, setWalletStatus] = useState(null);
   const { funds, loading, error } = useFunds();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     const { amount, message, fundAddress } = formData;
-
-    console.log("formData", formData);
-    console.log("fundAddress", fundAddress);
     e.preventDefault();
 
     if (!amount) return;
@@ -159,14 +156,24 @@ const Welcome = () => {
             {isLoading ? (
               <Loader />
             ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="flex justify-center items-center text-white w-full mt-2 border-[1px] p-2 border-[#3d4f7c] hover:bg-[#3d4f7c] rounded-full cursor-pointer"
-              >
-                <BiDonateHeart className="text-white mr-2" />
-                Donate
-              </button>
+              <>
+                <p className="text-sm text-center text-red-400 mb-2">
+                  {walletStatus === "disconnected" && "Wallet not connected"}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={walletStatus === "disconnected"}
+                  className={`flex justify-center items-center text-white w-full mt-2 border-[1px] p-2 rounded-full cursor-pointer ${
+                    walletStatus === "disconnected"
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "hover:bg-[#3d4f7c] border-[#3d4f7c]"
+                  }`}
+                >
+                  <BiDonateHeart className="text-white mr-2" />
+                  Donate
+                </button>
+              </>
             )}
           </div>
         </div>

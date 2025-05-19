@@ -1,10 +1,14 @@
+import { ethers } from "ethers";
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { LoginPage, SignUpPage } from "./components/landing";
 
 import LandingLayout from "./layout/LandingLayout";
-import CampaignLayout from "./layout/CampaignLayout";
+import CampaignDashboardLayout from "./layout/CampaignDashboardLayout";
+import TransactionLog from "./components/campaign/pages/TransactionLog";
 
 const App = () => {
+  window.ethers = ethers;
   return (
     <Router>
       <Routes>
@@ -25,7 +29,7 @@ const App = () => {
             </div>
           }
         />
-        <Route path="/campaigns/*" element={<CampaignLayout />} />
+        <Route path="/*" element={<CampaignDashboardLayout />} />
       </Routes>
     </Router>
   );

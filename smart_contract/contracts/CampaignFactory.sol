@@ -26,13 +26,12 @@ contract CampaignFactory {
         string calldata title,
         string calldata desc,
         uint256 target,
-        uint256  deadlineTs,
+        uint256 deadlineTs,
         string calldata image
     ) external payable returns (address campaignAddr) {
-        require(msg.value >= GENESIS_STAKE, "Must stake at least 0.1 ETH");
-        require(deadlineTs > block.timestamp, "Deadline in the future");
+        require(msg.value >= GENESIS_STAKE, "Need stake");
 
-        Campaign c = new Campaign{ value: msg.value }(
+        Campaign c = new Campaign(
             msg.sender,
             title,
             desc,
@@ -41,8 +40,10 @@ contract CampaignFactory {
             image
         );
 
+        c.genBlock{ value: msg.value }(); 
         campaignAddr = address(c);
 
+        
         campaigns.push(CampaignData({
             owner: msg.sender,
             title: title,
@@ -54,8 +55,10 @@ contract CampaignFactory {
             contractAddress: campaignAddr
         }));
 
+        
         emit CampaignDeployed(campaignAddr, msg.sender);
     }
+
     function getCampaigns() external view returns (CampaignData[] memory) {
         return campaigns;
     }

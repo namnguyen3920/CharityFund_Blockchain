@@ -1,11 +1,5 @@
 import AxiosHelper from "./AxiosHelper";
 
-/**
- * Request to register user.
- * @param {*} user a user object
- * @returns a response of the request
- */
-
 class FundRequest {
   getFunds() {
     return AxiosHelper.get("/fund/get-funds");

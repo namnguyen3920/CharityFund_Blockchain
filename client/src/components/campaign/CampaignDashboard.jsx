@@ -3,12 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import FundCard from "./FundCard";
 import { loader } from "../../assets";
+import CampaignSlugRequest from "../../Request/CampaignSlugRequest";
 
 const CampaignDashboard = ({ title, isLoading, campaigns }) => {
   const navigate = useNavigate();
 
-  const handleNavigate = (campaign) => {
-    navigate(`/campaign-details/${campaign.id}`, { state: campaign });
+  const handleNavigate = async (campaign) => {
+    try {
+      const res = await CampaignSlugRequest.getCampaignSlug(
+        campaign.contractAddress
+      );
+      const slug = res.data.slug;
+      navigate(`/campaigns/campaign-details/${slug}`);
+    } catch {
+      alert("Slug not found for this campaign.");
+    }
   };
 
   return (
@@ -18,20 +27,13 @@ const CampaignDashboard = ({ title, isLoading, campaigns }) => {
       </h1>
 
       <div className="flex flex-wrap mt-[20px] gap-[26px]">
-        {/* {isLoading && (
-          <img
-            src={loader}
-            alt="loader"
-            className="w-[100px] h-[100px] object-contain"
-          />
-        )} */}
-
         {!isLoading ||
           (campaigns.length === 0 && (
             <p className="font-bold text-[14px] leading-[30px] text-white">
               There are no campaigns created yet. <br /> Be the first to create
               a campaign.
-              <br /> Click on the "Create Campaign" button to get started.
+              <br />
+              Login and Click on the "Create Campaign" button to get started.
             </p>
           ))}
 

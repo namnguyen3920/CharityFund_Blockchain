@@ -51,9 +51,7 @@ export const TransactionsProvider = ({ children }) => {
   const handleReset = async () => {
     const contract = getTransactionContract();
     const tx = await contract.resetTransactions();
-    console.log("Resetting transactions...");
     await tx.wait();
-    console.log("Transactions reset!");
     window.location.reload();
   };
 
@@ -115,7 +113,7 @@ export const TransactionsProvider = ({ children }) => {
 
         console.log("Wallet connected:", account);
       }
-      window.location.reload();
+      //window.location.reload();
     } catch (error) {
       console.error("Connect Wallet Error:", error.message);
     } finally {

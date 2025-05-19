@@ -9,6 +9,7 @@ app.use(express.json());
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/fund", require("./routes/fundRouter"));
+app.use("/api/campaigns", require("./routes/campaignSlugRouter"));
 console.log("MONGO_URI:", process.env.MONGO_URI);
 mongoose
   .connect(process.env.MONGO_URI)

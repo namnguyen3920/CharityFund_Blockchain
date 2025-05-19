@@ -1,5 +1,3 @@
-
-import { useContract, useContractWrite } from "@thirdweb-dev/react";
 import { ethers } from "ethers";
 import {
   campaignCreationABI,
@@ -7,56 +5,49 @@ import {
 } from "../utils/constants";
 
 export const useFactory = () => {
-  const { contract, isLoading: isFactoryLoading } = useContract(
-    campaignCreationAddress,
-    campaignCreationABI
-  );
-  const {
-    mutateAsync: createCampaignWrite,
-    isLoading: isCreateLoading,
-    error: createError,
-  } = useContractWrite(contract, "createCampaign");
+  const getSigner = () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    return provider.getSigner();
+  };
 
   const publishCampaign = async (form) => {
-    if (!contract) throw new Error("Contract not ready");
+    const signer = getSigner();
+    const contract = new ethers.Contract(
+      campaignCreationAddress,
+      campaignCreationABI,
+      signer
+    );
 
-    const args = [
-      form.title,
-      form.description,
-      form.target,
-      Math.floor(new Date(form.deadline).getTime() / 1000),
-      form.image,
-    ];
-
+    const goal = ethers.utils.parseUnits(form.target, 18);
+    const deadlineTs = Math.floor(new Date(form.deadline).getTime() / 1000);
     const value = ethers.utils.parseEther(form.genesis_amount);
 
-    return createCampaignWrite({
-      args,
-      overrides: { value },
-    });
+    const tx = await contract.createCampaign(
+      form.title,
+      form.description,
+      goal,
+      deadlineTs,
+      form.image,
+      { value }
+    );
+
+    return tx;
   };
 
   const getAllCampaigns = async () => {
-    if (!contract) {
-      console.error("Contract not ready");
-      return;
-    }
-    try {
-      const campaigns = await contract.call("getCampaigns");
-      console.log("Campaign:", campaigns);
-      return campaigns;
-    } catch (err) {
-      console.error("Get all campaigns failed:", err);
-      throw err;
-    }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const contract = new ethers.Contract(
+      campaignCreationAddress,
+      campaignCreationABI,
+      provider
+    );
+
+    const campaigns = await contract.getCampaigns();
+    return campaigns;
   };
 
   return {
-    contract,
-    isFactoryLoading,
     publishCampaign,
-    isCreateLoading,
-    createError,
     getAllCampaigns,
   };
 };

@@ -10,6 +10,7 @@ const FundCard = ({
   target,
   deadlineTs,
   amountCollected,
+  totalCollected,
   image,
   handleClick,
 }) => {

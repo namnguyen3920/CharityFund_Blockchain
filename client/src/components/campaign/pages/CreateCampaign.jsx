@@ -2,17 +2,21 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 
+import { slugify } from "../../../utils/slugify";
 import { useCampaignFactory } from "../../../context/CampaignFactoryContext";
 import { money } from "../../../assets";
 import { Loader } from "../../Loader";
 import { CustomButton, FormField } from "../custom";
 import { checkIfImage } from "../../../utils/campaignUtils";
+import CampaignSlugRequest from "../../../Request/CampaignSlugRequest";
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [slug, setSlug] = useState("");
   const { publishCampaign, isFactoryLoading, isCreateLoading } =
     useCampaignFactory();
+
   const [form, setForm] = useState({
     name: "",
     title: "",
@@ -34,20 +38,68 @@ const CreateCampaign = () => {
 
     setIsLoading(true);
 
+    const slug = slugify(form.title);
+
     checkIfImage(form.image, async (exists) => {
-      if (exists) {
-        setIsLoading(true);
-        await publishCampaign({
-          ...form,
-          target: ethers.utils.parseUnits(form.target, 18),
-        });
-        setIsLoading(false);
-        navigate("/campaigns");
-      } else {
-        alert("Provide valid image URL");
+      if (!exists) {
         setForm({ ...form, image: "" });
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const slugCheck = await CampaignSlugRequest.getCampaignAddress(slug);
+        if (slugCheck?.data) {
+          alert("Title already exists. Please choose a different title.");
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          console.error("Error checking slug:", err);
+          alert("Error validating title slug.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const tx = await publishCampaign(form);
+
+        const receipt = await tx.wait();
+
+        const event = receipt.events?.find(
+          (e) => e.event === "CampaignDeployed"
+        );
+
+        if (!event) {
+          throw new Error("Event not found!");
+        }
+
+        const campaignAddress = event.args.campaign;
+        console.log("Receipt event", receipt);
+        //const [campaignAddress] = receipt.events[0].args;
+
+        console.log("Campaign Address:", campaignAddress);
+
+        const result = await CampaignSlugRequest.createCampaignSlug({
+          slug,
+          campaignAddress,
+        });
+
+        if (result.status === 201) {
+          navigate(`/campaigns/campaign-details/${slug}`);
+        } else {
+          alert("Failed to store campaign slug.");
+        }
+      } catch (err) {
+        alert("Failed to create campaign.");
+        console.error("Create error:", err);
+      } finally {
+        setIsLoading(false);
       }
     });
+    console.log("Receipt event", receipt.events);
   };
 
   return (
