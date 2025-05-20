@@ -49,23 +49,33 @@ const RunningCampaign = () => {
   }, []);
 
   useEffect(() => {
-    if (!window.ethereum) return;
+    const fetchAndListen = async () => {
+      setIsLoading(true);
+      const campaignList = await getAllCampaigns();
+      setCampaigns(campaignList);
+      setIsLoading(false);
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const contract = new ethers.Contract(
-      campaignCreationAddress,
-      campaignCreationABI,
-      provider
-    );
-    const filter = contract.filters.CampaignDeployed();
+      if (!window.ethereum) return;
 
-    contract.on(filter, () => {
-      fetchCampaigns();
-    });
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(
+        campaignCreationAddress,
+        campaignCreationABI,
+        provider
+      );
+      const filter = contract.filters.CampaignDeployed();
 
-    return () => {
-      contract.removeAllListeners(filter);
+      contract.on(filter, async () => {
+        const updatedList = await getAllCampaigns();
+        setCampaigns(updatedList);
+      });
+
+      return () => {
+        contract.removeAllListeners(filter);
+      };
     };
+
+    fetchAndListen();
   }, []);
 
   return (

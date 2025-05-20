@@ -42,7 +42,11 @@ const NavBar = () => {
     <nav className="w-full flex md:justify-center justify-between items-center p-4">
       <div className="flex w-full justify-center items-center">
         <div className="md:flex-[0.5] flex-initial justify-center items-center">
-          <img src={logo} alt="logo" className="w-32 cursor-pointer" />
+          <img
+            src={logo}
+            alt="logo"
+            className="w-32 h-32 rounded-full object-cover"
+          />
         </div>
         <ul className="md:flex hidden list-none flex-row justify-between items-center flex-initial">
           {NAV_LINKS.map(({ title, path }) => (

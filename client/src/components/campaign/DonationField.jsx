@@ -17,6 +17,7 @@ const DonationBox = ({
   const navigate = useNavigate();
   const isCampaignClaimed = campaignData?.claimed === true;
   console.log("isTargetReach: ", isTargetReached);
+  console.log("connected address: ", connectedAddress);
   console.log("isCampaignClaimed: ", isCampaignClaimed);
   return (
     <div>

@@ -162,7 +162,12 @@ const CampaignDetail = () => {
                   : campaignData.totalCollected
               }
             />
-            <CountBox title="Donation" value={donators.length} />
+            <CountBox
+              title="Donation"
+              value={
+                campaignData.claimed ? donators.length - 1 : donators.length
+              }
+            />
           </div>
         </div>
       </div>

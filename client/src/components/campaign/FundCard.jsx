@@ -17,6 +17,8 @@ const FundCard = ({
   const remainingDays = daysLeft(deadlineTs);
   const collectedEth = ethers.utils.formatEther(amountCollected);
   const targetEth = ethers.utils.formatEther(target);
+
+  console.log("totalCollected", totalCollected);
   return (
     <div
       className="sm:w-[288px] w-full rounded-[15px] bg-[#1c1c24] cursor-pointer"

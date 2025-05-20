@@ -1,18 +1,49 @@
-import { useEffect, useState } from "react";
-import { useAddress } from "@thirdweb-dev/react";
+import { useState, useEffect } from "react";
 
 export const useWallet = () => {
-  const address = useAddress();
-  const [connectedAddress, setConnectedAddress] = useState(null);
+  const [address, setAddress] = useState(null);
 
   useEffect(() => {
-    if (address) {
-      setConnectedAddress(address);
-    }
-  }, [address]);
+    const getAddress = async () => {
+      if (typeof window.ethereum !== "undefined") {
+        const accounts = await window.ethereum.request({
+          method: "eth_accounts",
+        });
+        setAddress(accounts[0] || null);
+      }
+    };
 
-  return connectedAddress;
+    getAddress();
+
+    const handleAccountsChanged = (accounts) => {
+      setAddress(accounts[0] || null);
+    };
+
+    window.ethereum?.on("accountsChanged", handleAccountsChanged);
+
+    return () => {
+      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
+    };
+  }, []);
+
+  return address;
 };
+
+// import { useEffect, useState } from "react";
+// import { useAddress } from "@thirdweb-dev/react";
+
+// export const useWallet = () => {
+//   const address = useAddress();
+//   const [connectedAddress, setConnectedAddress] = useState(null);
+
+//   useEffect(() => {
+//     if (address) {
+//       setConnectedAddress(address);
+//     }
+//   }, [address]);
+
+//   return connectedAddress;
+// };
 
 // const useWallet = () => {
 //   const [currentAddress, setCurrentAddress] = useState("");
